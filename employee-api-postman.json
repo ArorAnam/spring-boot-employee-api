@@ -1,0 +1,123 @@
+{
+  "info": {
+    "name": "Employee API",
+    "description": "ReliaQuest Employee Challenge API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get All Employees",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8111/api/v1/employee",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8111",
+          "path": ["api", "v1", "employee"]
+        }
+      }
+    },
+    {
+      "name": "Search Employees by Name",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8111/api/v1/employee/search/Tiger",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8111",
+          "path": ["api", "v1", "employee", "search", "Tiger"]
+        }
+      }
+    },
+    {
+      "name": "Get Employee by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8111/api/v1/employee/{{employeeId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8111",
+          "path": ["api", "v1", "employee", "{{employeeId}}"]
+        }
+      }
+    },
+    {
+      "name": "Get Highest Salary",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8111/api/v1/employee/highestSalary",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8111",
+          "path": ["api", "v1", "employee", "highestSalary"]
+        }
+      }
+    },
+    {
+      "name": "Get Top 10 Highest Earning Employee Names",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8111/api/v1/employee/topTenHighestEarningEmployeeNames",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8111",
+          "path": ["api", "v1", "employee", "topTenHighestEarningEmployeeNames"]
+        }
+      }
+    },
+    {
+      "name": "Create Employee",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"John Smith\",\n  \"salary\": 85000,\n  \"age\": 28,\n  \"title\": \"Senior Developer\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8111/api/v1/employee",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8111",
+          "path": ["api", "v1", "employee"]
+        }
+      }
+    },
+    {
+      "name": "Delete Employee by ID",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8111/api/v1/employee/{{employeeId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8111",
+          "path": ["api", "v1", "employee", "{{employeeId}}"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "employeeId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

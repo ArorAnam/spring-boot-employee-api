@@ -16,9 +16,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -28,7 +28,6 @@ import org.springframework.web.client.RestTemplate;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@EnableRetry
 public class EmployeeService {
 
     private final RestTemplate restTemplate;
@@ -44,12 +43,13 @@ public class EmployeeService {
         try {
             log.debug("Fetching all employees from {}", baseUrl);
             ResponseEntity<ApiResponse<List<Employee>>> response = restTemplate.exchange(
-                    baseUrl, HttpMethod.GET, null, new ParameterizedTypeReference<ApiResponse<List<Employee>>>() {});
+                    baseUrl,
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<ApiResponse<List<Employee>>>() {});
 
             if (response.getBody() != null && response.getBody().getData() != null) {
-                log.info(
-                        "Successfully fetched {} employees",
-                        response.getBody().getData().size());
+                log.info("Successfully fetched {} employees", response.getBody().getData().size());
                 return response.getBody().getData();
             }
             return Collections.emptyList();
@@ -63,8 +63,8 @@ public class EmployeeService {
         log.debug("Searching employees by name: {}", searchString);
         List<Employee> allEmployees = getAllEmployees();
         return allEmployees.stream()
-                .filter(emp ->
-                        emp.getName() != null && emp.getName().toLowerCase().contains(searchString.toLowerCase()))
+                .filter(emp -> emp.getName() != null
+                        && emp.getName().toLowerCase().contains(searchString.toLowerCase()))
                 .collect(Collectors.toList());
     }
 
@@ -125,12 +125,13 @@ public class EmployeeService {
             log.debug("Creating employee: {}", input);
             HttpEntity<CreateEmployeeInput> request = new HttpEntity<>(input);
             ResponseEntity<ApiResponse<Employee>> response = restTemplate.exchange(
-                    baseUrl, HttpMethod.POST, request, new ParameterizedTypeReference<ApiResponse<Employee>>() {});
+                    baseUrl,
+                    HttpMethod.POST,
+                    request,
+                    new ParameterizedTypeReference<ApiResponse<Employee>>() {});
 
             if (response.getBody() != null && response.getBody().getData() != null) {
-                log.info(
-                        "Successfully created employee: {}",
-                        response.getBody().getData().getId());
+                log.info("Successfully created employee: {}", response.getBody().getData().getId());
                 return response.getBody().getData();
             }
             throw new RuntimeException("Failed to create employee - no data in response");
@@ -161,10 +162,12 @@ public class EmployeeService {
             HttpEntity<Map<String, String>> request = new HttpEntity<>(deleteRequest);
 
             ResponseEntity<ApiResponse<Boolean>> response = restTemplate.exchange(
-                    baseUrl, HttpMethod.DELETE, request, new ParameterizedTypeReference<ApiResponse<Boolean>>() {});
+                    baseUrl,
+                    HttpMethod.DELETE,
+                    request,
+                    new ParameterizedTypeReference<ApiResponse<Boolean>>() {});
 
-            if (response.getBody() != null
-                    && Boolean.TRUE.equals(response.getBody().getData())) {
+            if (response.getBody() != null && Boolean.TRUE.equals(response.getBody().getData())) {
                 log.info("Successfully deleted employee with id: {}", id);
                 return employeeName;
             }

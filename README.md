@@ -7,6 +7,8 @@ A Spring Boot application that provides RESTful APIs for managing employee data.
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
 - [API Endpoints](#api-endpoints)
+- [API Documentation](#api-documentation)
+- [Health Checks & Monitoring](#health-checks--monitoring)
 - [Testing](#testing)
 - [Project Structure](#project-structure)
 - [Implementation Details](#implementation-details)
@@ -114,12 +116,82 @@ DELETE /api/v1/employee/{id}
 ```
 Deletes an employee by their UUID and returns the employee's name.
 
+## API Documentation
+
+### OpenAPI/Swagger Documentation
+The API is fully documented using OpenAPI 3.0 specifications with Swagger UI.
+
+- **Swagger UI**: `http://localhost:8111/swagger-ui.html`
+- **OpenAPI JSON**: `http://localhost:8111/api-docs`
+
+The documentation includes:
+- Complete endpoint descriptions with examples
+- Request/response schemas
+- Error response formats
+- Interactive "Try it out" functionality
+
+### Error Handling
+The API implements comprehensive error handling with standardized error responses:
+
+```json
+{
+  "error": "EMPLOYEE_NOT_FOUND",
+  "message": "Employee not found with ID: 123",
+  "status": 404,
+  "path": "/api/v1/employee/123",
+  "timestamp": "2024-01-15 10:30:45",
+  "traceId": "abc12345"
+}
+```
+
+**Error Types:**
+- `EMPLOYEE_NOT_FOUND` (404) - Employee does not exist
+- `VALIDATION_FAILED` (400) - Input validation errors
+- `EXTERNAL_SERVICE_ERROR` (502/503) - Mock server issues
+- `INVALID_JSON` (400) - Malformed request body
+
+## Health Checks & Monitoring
+
+### Health Endpoints
+- **Application Health**: `http://localhost:8111/actuator/health`
+- **Detailed Health**: Shows status of all components including Mock Employee API connectivity and Circuit Breaker status
+
+### Metrics & Monitoring
+- **Metrics**: `http://localhost:8111/actuator/metrics`
+- **Prometheus**: `http://localhost:8111/actuator/prometheus`
+
+**Custom Metrics:**
+- `employees.count` - Current number of employees
+- `employees.fetch.success` - Successful fetch operations
+- `employees.fetch.error` - Failed fetch operations
+- `employees.fetch.duration` - Time taken for fetch operations
+- `employees.created` - Number of employees created
+- `employees.create.error` - Failed creation attempts
+
+**Resilience4j Metrics:**
+- `resilience4j.circuitbreaker.calls` - Circuit breaker call metrics
+- `resilience4j.circuitbreaker.state` - Circuit breaker state (CLOSED, OPEN, HALF_OPEN)
+- `resilience4j.ratelimiter.calls` - Rate limiter call metrics
+- `resilience4j.retry.calls` - Retry attempt metrics
+- `resilience4j.circuitbreaker.failure.rate` - Circuit breaker failure rate
+
+### Application Info
+- **Info Endpoint**: `http://localhost:8111/actuator/info`
+- Shows application name, version, Java version, and description
+
 ## Testing
 
 ### Unit Tests
 The project includes comprehensive unit tests for:
 - Controller layer (`EmployeeControllerTest`)
 - Service layer (`EmployeeServiceTest`)
+
+### Integration Tests
+Full integration tests with MockMvc:
+- `EmployeeControllerIntegrationTest` - Tests complete request/response cycles
+- Error scenario testing
+- Validation testing
+- HTTP status code verification
 
 Run tests with:
 ```bash
@@ -167,23 +239,62 @@ java-employee-challenge/
 
 ### Key Features
 
-1. **Retry Mechanism**: Automatic retry with exponential backoff for handling rate limiting (429 responses)
-2. **Error Handling**: Comprehensive error handling with appropriate HTTP status codes
-3. **Validation**: Input validation using Jakarta Bean Validation
-4. **Logging**: Structured logging at appropriate levels
-5. **Clean Architecture**: Separation of concerns with Controller-Service-Model layers
-6. **Type Safety**: Generic interface implementation with proper type parameters
+1. **Resilience Patterns**: 
+   - **Circuit Breaker**: Prevents cascade failures by opening circuit when failure threshold is reached
+   - **Rate Limiter**: Controls outbound request rate (10 requests/second) to prevent overwhelming the server
+   - **Retry with Exponential Backoff**: Automatic retry on transient failures with increasing delays
+   - **Response Caching**: Caches successful responses to reduce server load and improve performance
+   - **Timeout Management**: Configurable connection and read timeouts
+   - **Connection Pooling**: Apache HttpClient with connection pooling for efficient HTTP connections
+2. **Advanced Error Handling**: 
+   - Custom exception classes with specific error types
+   - Global exception handler with @ControllerAdvice
+   - Standardized error response format with trace IDs
+   - Graceful degradation with fallback methods
+3. **Input Validation**: 
+   - Jakarta Bean Validation with custom constraints
+   - Field-level validation error reporting
+4. **API Documentation**: 
+   - Complete OpenAPI 3.0 documentation
+   - Interactive Swagger UI
+   - Schema examples and descriptions
+5. **Health Monitoring**: 
+   - Custom health indicators for external services
+   - Comprehensive application health checks
+   - Resilience4j circuit breaker health indicators
+6. **Metrics & Observability**:
+   - Custom Micrometer metrics
+   - Prometheus integration
+   - Request timing and success/failure tracking
+   - Resilience4j metrics for circuit breaker, rate limiter, and retry
+7. **Performance Optimization**:
+   - Response caching with Caffeine for frequently accessed data
+   - Connection pooling with keep-alive connections
+   - Optimized HTTP client configuration
+8. **Testing**:
+   - Comprehensive unit and integration tests
+   - MockMvc integration testing
+   - Error scenario coverage
+9. **Clean Architecture**: Separation of concerns with Controller-Service-Model layers
+10. **Type Safety**: Generic interface implementation with proper type parameters
 
 ### Technologies Used
 
-- Spring Boot 2.7.x
+- Spring Boot 3.2.10
 - Spring Web
-- Spring Retry
+- Spring Cache with Caffeine
+- Spring Boot Actuator
+- Spring Boot Validation
+- SpringDoc OpenAPI 3
+- Resilience4j (Circuit Breaker, Rate Limiter, Retry)
+- Apache HttpClient 5 (Connection Pooling)
+- Micrometer & Prometheus
 - Lombok
 - Jackson
 - JUnit 5
 - Mockito
 - RestTemplate
+- MockMvc
 
 ### Design Decisions
 
@@ -198,7 +309,28 @@ java-employee-challenge/
 ### Application Properties
 - API Port: `8111`
 - Mock Server URL: `http://localhost:8112/api/v1/employee`
-- Timeouts: 5 seconds for connection and read
+- HTTP Connection Pool: 100 total connections, 20 per route
+- Connection Timeout: 3 seconds
+- Read Timeout: 5 seconds
+
+### Resilience Configuration
+The application uses Resilience4j patterns with the following configuration:
+
+#### Circuit Breaker
+- Sliding window size: 20 requests
+- Failure rate threshold: 60%
+- Wait duration in open state: 60 seconds
+- Calls in half-open state: 5
+
+#### Rate Limiter
+- Request limit: 10 requests per second
+- Timeout: 2 seconds
+
+#### Retry
+- Max attempts: 3
+- Wait duration: 1 second
+- Exponential backoff: 2x multiplier, max 10 seconds
+- Retry exceptions: Server errors, 429 responses, timeouts
 
 ### Customization
 The base URL for the mock server can be configured via:
@@ -206,18 +338,51 @@ The base URL for the mock server can be configured via:
 employee.api.base-url: http://localhost:8112/api/v1/employee
 ```
 
+Resilience patterns can be tuned in `application.yml`:
+```yaml
+resilience4j:
+  circuitbreaker:
+    instances:
+      employee-service:
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 60s
+  ratelimiter:
+    instances:
+      employee-service:
+        limit-for-period: 10
+        limit-refresh-period: 1s
+```
+
 ## Known Limitations
 
-1. The mock server randomly rate limits requests - the API handles this with retries
+1. The mock server intermittently rate limits requests with 429 responses - handled by resilience patterns
 2. Employee deletion requires the employee name (mock server limitation)
 3. The mock server allows duplicate employee creation with the same data
+4. Circuit breaker fallback returns empty responses for read operations to maintain availability
 
 ## Future Enhancements
 
-- Add caching for frequently accessed data
-- Implement pagination for employee list
-- Add API versioning
-- Enhance with OpenAPI/Swagger documentation
-- Add metrics and monitoring
-- Implement authentication and authorization
-- Add more comprehensive integration tests
+See [ENHANCEMENTS.md](ENHANCEMENTS.md) for a comprehensive list of potential improvements including:
+
+- Caching implementation with Redis
+- Database integration with JPA/Hibernate
+- Authentication and authorization (OAuth2/JWT)
+- Event-driven architecture with message queues
+- Containerization with Docker
+- CI/CD pipeline setup
+- Load testing and performance optimization
+
+## Available Endpoints Summary
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/employee` | GET | Get all employees |
+| `/api/v1/employee/search/{name}` | GET | Search employees by name |
+| `/api/v1/employee/{id}` | GET | Get employee by ID |
+| `/api/v1/employee/highestSalary` | GET | Get highest salary |
+| `/api/v1/employee/topTenHighestEarningEmployeeNames` | GET | Get top 10 earners |
+| `/api/v1/employee` | POST | Create new employee |
+| `/api/v1/employee/{id}` | DELETE | Delete employee |
+| `/swagger-ui.html` | GET | API Documentation |
+| `/actuator/health` | GET | Health checks |
+| `/actuator/metrics` | GET | Application metrics |

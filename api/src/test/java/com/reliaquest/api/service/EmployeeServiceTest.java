@@ -4,9 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.reliaquest.api.exception.EmployeeNotFoundException;
 import com.reliaquest.api.model.ApiResponse;
 import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.model.Employee;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -14,8 +18,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -32,7 +36,9 @@ class EmployeeServiceTest {
     @Mock
     private RestTemplate restTemplate;
 
-    @InjectMocks
+    @Mock
+    private MeterRegistry meterRegistry;
+
     private EmployeeService employeeService;
 
     private final String baseUrl = "http://localhost:8112/api/v1/employee";
@@ -42,6 +48,8 @@ class EmployeeServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Create service instance
+        employeeService = new EmployeeService(restTemplate, meterRegistry);
         ReflectionTestUtils.setField(employeeService, "baseUrl", baseUrl);
 
         testEmployee = Employee.builder()
@@ -67,11 +75,30 @@ class EmployeeServiceTest {
         when(restTemplate.exchange(eq(baseUrl), eq(HttpMethod.GET), isNull(), any(ParameterizedTypeReference.class)))
                 .thenReturn(ResponseEntity.ok(listResponse));
 
-        List<Employee> result = employeeService.getAllEmployees();
+        try (MockedStatic<Timer> timerMock = mockStatic(Timer.class);
+                MockedStatic<Counter> counterMock = mockStatic(Counter.class)) {
 
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(testEmployee.getName(), result.get(0).getName());
+            Timer.Sample mockSample = mock(Timer.Sample.class);
+            Timer.Builder mockTimerBuilder = mock(Timer.Builder.class);
+            Timer mockTimer = mock(Timer.class);
+            Counter.Builder mockCounterBuilder = mock(Counter.Builder.class);
+            Counter mockCounter = mock(Counter.class);
+
+            timerMock.when(() -> Timer.start(any(MeterRegistry.class))).thenReturn(mockSample);
+            timerMock.when(() -> Timer.builder(anyString())).thenReturn(mockTimerBuilder);
+            counterMock.when(() -> Counter.builder(anyString())).thenReturn(mockCounterBuilder);
+
+            when(mockTimerBuilder.description(anyString())).thenReturn(mockTimerBuilder);
+            when(mockTimerBuilder.register(any(MeterRegistry.class))).thenReturn(mockTimer);
+            when(mockCounterBuilder.description(anyString())).thenReturn(mockCounterBuilder);
+            when(mockCounterBuilder.register(any(MeterRegistry.class))).thenReturn(mockCounter);
+
+            List<Employee> result = employeeService.getAllEmployees();
+
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            assertEquals(testEmployee.getName(), result.get(0).getName());
+        }
     }
 
     @Test
@@ -80,10 +107,23 @@ class EmployeeServiceTest {
         when(restTemplate.exchange(eq(baseUrl), eq(HttpMethod.GET), isNull(), any(ParameterizedTypeReference.class)))
                 .thenReturn(ResponseEntity.ok(emptyResponse));
 
-        List<Employee> result = employeeService.getAllEmployees();
+        try (MockedStatic<Timer> timerMock = mockStatic(Timer.class)) {
 
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
+            Timer.Sample mockSample = mock(Timer.Sample.class);
+            Timer.Builder mockTimerBuilder = mock(Timer.Builder.class);
+            Timer mockTimer = mock(Timer.class);
+
+            timerMock.when(() -> Timer.start(any(MeterRegistry.class))).thenReturn(mockSample);
+            timerMock.when(() -> Timer.builder(anyString())).thenReturn(mockTimerBuilder);
+
+            when(mockTimerBuilder.description(anyString())).thenReturn(mockTimerBuilder);
+            when(mockTimerBuilder.register(any(MeterRegistry.class))).thenReturn(mockTimer);
+
+            List<Employee> result = employeeService.getAllEmployees();
+
+            assertNotNull(result);
+            assertTrue(result.isEmpty());
+        }
     }
 
     @Test
@@ -91,11 +131,30 @@ class EmployeeServiceTest {
         when(restTemplate.exchange(eq(baseUrl), eq(HttpMethod.GET), isNull(), any(ParameterizedTypeReference.class)))
                 .thenReturn(ResponseEntity.ok(listResponse));
 
-        List<Employee> result = employeeService.searchEmployeesByName("John");
+        try (MockedStatic<Timer> timerMock = mockStatic(Timer.class);
+                MockedStatic<Counter> counterMock = mockStatic(Counter.class)) {
 
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("John Doe", result.get(0).getName());
+            Timer.Sample mockSample = mock(Timer.Sample.class);
+            Timer.Builder mockTimerBuilder = mock(Timer.Builder.class);
+            Timer mockTimer = mock(Timer.class);
+            Counter.Builder mockCounterBuilder = mock(Counter.Builder.class);
+            Counter mockCounter = mock(Counter.class);
+
+            timerMock.when(() -> Timer.start(any(MeterRegistry.class))).thenReturn(mockSample);
+            timerMock.when(() -> Timer.builder(anyString())).thenReturn(mockTimerBuilder);
+            counterMock.when(() -> Counter.builder(anyString())).thenReturn(mockCounterBuilder);
+
+            when(mockTimerBuilder.description(anyString())).thenReturn(mockTimerBuilder);
+            when(mockTimerBuilder.register(any(MeterRegistry.class))).thenReturn(mockTimer);
+            when(mockCounterBuilder.description(anyString())).thenReturn(mockCounterBuilder);
+            when(mockCounterBuilder.register(any(MeterRegistry.class))).thenReturn(mockCounter);
+
+            List<Employee> result = employeeService.searchEmployeesByName("John");
+
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            assertEquals("John Doe", result.get(0).getName());
+        }
     }
 
     @Test
@@ -103,10 +162,29 @@ class EmployeeServiceTest {
         when(restTemplate.exchange(eq(baseUrl), eq(HttpMethod.GET), isNull(), any(ParameterizedTypeReference.class)))
                 .thenReturn(ResponseEntity.ok(listResponse));
 
-        List<Employee> result = employeeService.searchEmployeesByName("Smith");
+        try (MockedStatic<Timer> timerMock = mockStatic(Timer.class);
+                MockedStatic<Counter> counterMock = mockStatic(Counter.class)) {
 
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
+            Timer.Sample mockSample = mock(Timer.Sample.class);
+            Timer.Builder mockTimerBuilder = mock(Timer.Builder.class);
+            Timer mockTimer = mock(Timer.class);
+            Counter.Builder mockCounterBuilder = mock(Counter.Builder.class);
+            Counter mockCounter = mock(Counter.class);
+
+            timerMock.when(() -> Timer.start(any(MeterRegistry.class))).thenReturn(mockSample);
+            timerMock.when(() -> Timer.builder(anyString())).thenReturn(mockTimerBuilder);
+            counterMock.when(() -> Counter.builder(anyString())).thenReturn(mockCounterBuilder);
+
+            when(mockTimerBuilder.description(anyString())).thenReturn(mockTimerBuilder);
+            when(mockTimerBuilder.register(any(MeterRegistry.class))).thenReturn(mockTimer);
+            when(mockCounterBuilder.description(anyString())).thenReturn(mockCounterBuilder);
+            when(mockCounterBuilder.register(any(MeterRegistry.class))).thenReturn(mockCounter);
+
+            List<Employee> result = employeeService.searchEmployeesByName("Smith");
+
+            assertNotNull(result);
+            assertTrue(result.isEmpty());
+        }
     }
 
     @Test
@@ -148,9 +226,28 @@ class EmployeeServiceTest {
         when(restTemplate.exchange(eq(baseUrl), eq(HttpMethod.GET), isNull(), any(ParameterizedTypeReference.class)))
                 .thenReturn(ResponseEntity.ok(response));
 
-        Integer result = employeeService.getHighestSalary();
+        try (MockedStatic<Timer> timerMock = mockStatic(Timer.class);
+                MockedStatic<Counter> counterMock = mockStatic(Counter.class)) {
 
-        assertEquals(150000, result);
+            Timer.Sample mockSample = mock(Timer.Sample.class);
+            Timer.Builder mockTimerBuilder = mock(Timer.Builder.class);
+            Timer mockTimer = mock(Timer.class);
+            Counter.Builder mockCounterBuilder = mock(Counter.Builder.class);
+            Counter mockCounter = mock(Counter.class);
+
+            timerMock.when(() -> Timer.start(any(MeterRegistry.class))).thenReturn(mockSample);
+            timerMock.when(() -> Timer.builder(anyString())).thenReturn(mockTimerBuilder);
+            counterMock.when(() -> Counter.builder(anyString())).thenReturn(mockCounterBuilder);
+
+            when(mockTimerBuilder.description(anyString())).thenReturn(mockTimerBuilder);
+            when(mockTimerBuilder.register(any(MeterRegistry.class))).thenReturn(mockTimer);
+            when(mockCounterBuilder.description(anyString())).thenReturn(mockCounterBuilder);
+            when(mockCounterBuilder.register(any(MeterRegistry.class))).thenReturn(mockCounter);
+
+            Integer result = employeeService.getHighestSalary();
+
+            assertEquals(150000, result);
+        }
     }
 
     @Test
@@ -165,12 +262,31 @@ class EmployeeServiceTest {
         when(restTemplate.exchange(eq(baseUrl), eq(HttpMethod.GET), isNull(), any(ParameterizedTypeReference.class)))
                 .thenReturn(ResponseEntity.ok(response));
 
-        List<String> result = employeeService.getTop10HighestEarningEmployeeNames();
+        try (MockedStatic<Timer> timerMock = mockStatic(Timer.class);
+                MockedStatic<Counter> counterMock = mockStatic(Counter.class)) {
 
-        assertEquals(3, result.size());
-        assertEquals("Employee1", result.get(0));
-        assertEquals("Employee2", result.get(1));
-        assertEquals("Employee3", result.get(2));
+            Timer.Sample mockSample = mock(Timer.Sample.class);
+            Timer.Builder mockTimerBuilder = mock(Timer.Builder.class);
+            Timer mockTimer = mock(Timer.class);
+            Counter.Builder mockCounterBuilder = mock(Counter.Builder.class);
+            Counter mockCounter = mock(Counter.class);
+
+            timerMock.when(() -> Timer.start(any(MeterRegistry.class))).thenReturn(mockSample);
+            timerMock.when(() -> Timer.builder(anyString())).thenReturn(mockTimerBuilder);
+            counterMock.when(() -> Counter.builder(anyString())).thenReturn(mockCounterBuilder);
+
+            when(mockTimerBuilder.description(anyString())).thenReturn(mockTimerBuilder);
+            when(mockTimerBuilder.register(any(MeterRegistry.class))).thenReturn(mockTimer);
+            when(mockCounterBuilder.description(anyString())).thenReturn(mockCounterBuilder);
+            when(mockCounterBuilder.register(any(MeterRegistry.class))).thenReturn(mockCounter);
+
+            List<String> result = employeeService.getTop10HighestEarningEmployeeNames();
+
+            assertEquals(3, result.size());
+            assertEquals("Employee1", result.get(0));
+            assertEquals("Employee2", result.get(1));
+            assertEquals("Employee3", result.get(2));
+        }
     }
 
     @Test
@@ -186,10 +302,21 @@ class EmployeeServiceTest {
                         eq(baseUrl), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(ResponseEntity.ok(singleResponse));
 
-        Employee result = employeeService.createEmployee(input);
+        try (MockedStatic<Counter> counterMock = mockStatic(Counter.class)) {
 
-        assertNotNull(result);
-        assertEquals(testEmployee.getName(), result.getName());
+            Counter.Builder mockCounterBuilder = mock(Counter.Builder.class);
+            Counter mockCounter = mock(Counter.class);
+
+            counterMock.when(() -> Counter.builder(anyString())).thenReturn(mockCounterBuilder);
+
+            when(mockCounterBuilder.description(anyString())).thenReturn(mockCounterBuilder);
+            when(mockCounterBuilder.register(any(MeterRegistry.class))).thenReturn(mockCounter);
+
+            Employee result = employeeService.createEmployee(input);
+
+            assertNotNull(result);
+            assertEquals(testEmployee.getName(), result.getName());
+        }
     }
 
     @Test
@@ -224,6 +351,6 @@ class EmployeeServiceTest {
                         eq(baseUrl + "/" + id), eq(HttpMethod.GET), isNull(), any(ParameterizedTypeReference.class)))
                 .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
 
-        assertThrows(RuntimeException.class, () -> employeeService.deleteEmployeeById(id));
+        assertThrows(EmployeeNotFoundException.class, () -> employeeService.deleteEmployeeById(id));
     }
 }

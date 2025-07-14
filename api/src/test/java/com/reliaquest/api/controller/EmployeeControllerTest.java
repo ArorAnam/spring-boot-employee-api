@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.reliaquest.api.exception.EmployeeNotFoundException;
+import com.reliaquest.api.exception.ExternalServiceException;
 import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.model.Employee;
 import com.reliaquest.api.service.EmployeeService;
@@ -69,12 +71,10 @@ class EmployeeControllerTest {
 
     @Test
     void getAllEmployees_Exception() {
-        when(employeeService.getAllEmployees()).thenThrow(new RuntimeException("Service error"));
+        when(employeeService.getAllEmployees())
+                .thenThrow(new ExternalServiceException("Mock Employee API", "Service error"));
 
-        ResponseEntity<List<Employee>> response = employeeController.getAllEmployees();
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertNull(response.getBody());
+        assertThrows(ExternalServiceException.class, () -> employeeController.getAllEmployees());
     }
 
     @Test
@@ -160,21 +160,17 @@ class EmployeeControllerTest {
     @Test
     void deleteEmployeeById_NotFound() {
         String id = UUID.randomUUID().toString();
-        when(employeeService.deleteEmployeeById(id))
-                .thenThrow(new RuntimeException("Employee not found with id: " + id));
+        when(employeeService.deleteEmployeeById(id)).thenThrow(new EmployeeNotFoundException(id));
 
-        ResponseEntity<String> response = employeeController.deleteEmployeeById(id);
-
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertThrows(EmployeeNotFoundException.class, () -> employeeController.deleteEmployeeById(id));
     }
 
     @Test
     void deleteEmployeeById_OtherError() {
         String id = UUID.randomUUID().toString();
-        when(employeeService.deleteEmployeeById(id)).thenThrow(new RuntimeException("Database error"));
+        when(employeeService.deleteEmployeeById(id))
+                .thenThrow(new ExternalServiceException("Mock Employee API", "Database error"));
 
-        ResponseEntity<String> response = employeeController.deleteEmployeeById(id);
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertThrows(ExternalServiceException.class, () -> employeeController.deleteEmployeeById(id));
     }
 }
